@@ -7,31 +7,24 @@ and automatically started on system startup.
 import os, sys, time
 import optparse
 import shutil
+import re
 from subprocess import call, check_call, check_output
 import subprocess
 import requests
 import json
 from xml.etree.ElementTree import tostring, fromstring
+
 import logging
+logger = logging.getLogger(__name__)
 
 
-def init_logger(name, level, format=None, datetime=None):
-    """Initializes global logger.
-
-       Initializes 'logger' as a global variable and creates a stream
-       handler that outputs messages to stderr.
+def init_logger(level=logging.INFO, format=None, datetime=None):
+    """initialize the root logger
     """
 
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-
-    f = format or '%(asctime)s %(levelname)s: %(message)s'
+    f = format or '%(asctime)s %(module)s: %(levelname)s: %(message)s'
     d = datetime or '%Y-%m-%d %H:%M:%S'
-
-    h = logging.StreamHandler()
-    h.setFormatter(logging.Formatter(f, d))
-    logger.addHandler(h)
+    logging.basicConfig(level=level, format=f, datefmt=d)
 
 
 def safe_string(s):
@@ -128,9 +121,16 @@ def xml_response(rsp):
         logger.info("Job Complete")
 
 
-def load_repository(repo, jobid):
-    """load the repository into a new directory
+def parse_userdata():
+    """parse the AWS userdata and return user and password
     """
+    pass
+
+
+def get_repository(repo, jobid):
+    """get the repository into a new directory
+    """
+    import pdb; pdb.set_trace()
 
     rundir = safe_string(jobid)
     logger.debug('loading repository %s to %s' % (repo, rundir))
@@ -145,7 +145,7 @@ def load_repository(repo, jobid):
         cmd = repo.split().append(rundir)
         with open(os.devnull, 'wb') as FNULL:
             check_call(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
-        logger.debug('check complete')
+        logger.debug('repo checkout complete')
     else:
         os.mkdir(rundir)
         logger.debug('no repo specified, mkdir ' + rundir)
@@ -190,11 +190,11 @@ def json_response(rsp):
         logger.debug('json_response: pop_queue returned empty')
         return
 
-    logger.info('New Job ' + rsp.get('title'))
+    logger.info("New Job = '%s'" % rsp.get('title'))
     on_error = rsp.get('on_error', '')
 
     try:
-        rundir = load_repository(rsp.get('repository', ''), rsp.get('id'))
+        rundir = get_repository(rsp.get('repository', ''), rsp.get('id'))
 
     except subprocess.CalledProcessError as e:
         report_error(on_error, 'unable to checkout repository')
@@ -250,22 +250,25 @@ def main():
         help="append '/pop_queue' to the command line URL")
     parser.add_option('-p', '--preserve', default=False, action='store_true',
         help='preserve runtime dirs created for each job')
-    parser.add_option('-d', '--debug', default=False, action='store_true',
-        help='set log level to DEBUG')
     parser.add_option('-U', '--user', default=None,
         help='Portal user name (or PORTAL_USER environmental var)')
     parser.add_option('-X', '--password', default=None,
         help='Portal password (or PORTAL_PASSWORD environmental var)')
     parser.add_option('-u', '--userdata', default=False, action='store_true',
         help='parse user data for authentication data')
+    parser.add_option('-d', '--debug', default=False, action='store_true',
+        help='set log level to DEBUG')
 
 
     (options, args) = parser.parse_args()
 
-    init_logger(__name__, logging.INFO)
     if options.debug:
-        logger.setLevel(logging.DEBUG)
+        init_logger(level=logging.DEBUG)
+    else:
+        init_logger()
 
+    # make sure requests module is relatively quiet
+    logging.getLogger("requests").setLevel(logging.WARNING)
 
     # check for authentication variables
     # If not set then log message to stderr and return error if the

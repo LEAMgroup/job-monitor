@@ -274,18 +274,18 @@ def main():
     # If not set then log message to stderr and return error if the
     # script was started by a job monitor then it should report to
     # portal.
-    if options.userdata:
-        user, password = parse_userdata()
-    else: 
-        user = options.user or os.environ.get('PORTAL_USER', '')
-        password = options.password or os.environ.get('PORTAL_PASSWORD', '')
+    user = options.user or os.environ.get('PORTAL_USER', '')
+    password = options.password or os.environ.get('PORTAL_PASSWORD', '')
 
-    if not user or not password:
+    # ensure user/password set in environment for modeling commands
+    if user and password:
+        os.environ['PORTAL_USER'] = user
+        os.environ['PORTAL_PASSWORD'] = password
+
+    else:
         logger.error('Portal user and password are required. '
-                'Specify on the command line or environmental variables or '
-                'in user data section of AWS instance.\n')
+                'Specify on the command line or environmental variables.\n')
         sys.exit(1)
-
 
     if len(args) != 1:
         logger.error('the URL to the Plone site is required')

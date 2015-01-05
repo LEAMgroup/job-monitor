@@ -17,6 +17,7 @@ from xml.etree.ElementTree import tostring, fromstring
 import logging
 logger = logging.getLogger(__name__)
 
+VERSION = 2.1
 
 def init_logger(level=logging.INFO, format=None, datetime=None):
     """initialize the root logger
@@ -130,7 +131,6 @@ def parse_userdata():
 def get_repository(repo, jobid):
     """get the repository into a new directory
     """
-    import pdb; pdb.set_trace()
 
     rundir = safe_string(jobid)
     logger.debug('loading repository %s to %s' % (repo, rundir))
@@ -142,7 +142,7 @@ def get_repository(repo, jobid):
     # TODO: if the repository is misconfigured git attempts to interactively
     # ask for a password. This will hang everything!
     if repo:
-        cmd = repo.split().append(rundir)
+        cmd = repo.split() + [rundir,]
         with open(os.devnull, 'wb') as FNULL:
             check_call(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
         logger.debug('repo checkout complete')
@@ -258,9 +258,14 @@ def main():
         help='parse user data for authentication data')
     parser.add_option('-d', '--debug', default=False, action='store_true',
         help='set log level to DEBUG')
-
+    parser.add_option('-v', '--version', default=False, action='store_true',
+        help='print version and exit')
 
     (options, args) = parser.parse_args()
+
+    if options.version:
+        sys.stdout.write('%s version=%s\n' % (sys.argv[0],VERSION))
+        sys.exit(0)
 
     if options.debug:
         init_logger(level=logging.DEBUG)

@@ -130,10 +130,16 @@ def parse_userdata():
 
 def get_repository(repo, jobid):
     """get the repository into a new directory
+
+    Args:
+      repo (str): command to checkout application
+      jobid (str): a short name for the job
+
+    Returns:
+      (str): returns name of runtime directory
     """
 
     rundir = safe_string(jobid)
-    logger.debug('loading repository %s to %s' % (repo, rundir))
 
     # remove old rundir if it exists
     if os.path.exists(rundir):
@@ -142,6 +148,7 @@ def get_repository(repo, jobid):
     # TODO: if the repository is misconfigured git attempts to interactively
     # ask for a password. This will hang everything!
     if repo:
+        logger.debug('loading repository %s to %s' % (repo, rundir))
         cmd = repo.split() + [rundir,]
         with open(os.devnull, 'wb') as FNULL:
             check_call(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
